@@ -92,3 +92,32 @@ export interface IntervalsResponse {
   date: string
   intervals: IntervalConsumption[]
 }
+
+/** Tariff of the latest contract of a customer. */
+export type TariffType = 'standard' | 'dynamic'
+
+/** Transformer that feeds one of the customer's meters. */
+export interface TransformerProfile {
+  code: string
+  capacity_kva: string
+}
+
+/** Circuit the transformer of a meter belongs to. */
+export interface CircuitProfile {
+  code: string
+}
+
+/** Meter of the customer with the transformer and circuit that feed it. */
+export interface MeterProfile {
+  lclid: string
+  transformer: TransformerProfile
+  circuit: CircuitProfile
+}
+
+/** Response of `GET /me/profile`: contract, socioeconomic group and meters of the customer. */
+export interface ProfileResponse {
+  customer_code: string
+  tariff_type: TariffType | null
+  socioeconomic_group: string | null
+  meters: MeterProfile[]
+}

@@ -15,6 +15,7 @@ import type {
   EventsResponse,
   FieldError,
   IntervalsResponse,
+  ProfileResponse,
   TokenRequest,
   TokenResponse,
 } from './types'
@@ -178,4 +179,14 @@ export async function getMyEvents(month: string): Promise<EventsResponse> {
  */
 export async function getMyIntervals(date: string): Promise<IntervalsResponse> {
   return request<IntervalsResponse>(`/me/consumption/intervals?date=${encodeURIComponent(date)}`)
+}
+
+/**
+ * Reads `GET /me/profile`.
+ *
+ * @returns Contract, socioeconomic group and meters of the authenticated customer.
+ * @throws {ApiError} When the API rejects the request.
+ */
+export async function getMyProfile(): Promise<ProfileResponse> {
+  return request<ProfileResponse>('/me/profile')
 }
