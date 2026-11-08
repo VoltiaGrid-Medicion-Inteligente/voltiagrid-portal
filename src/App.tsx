@@ -1,14 +1,27 @@
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
+import AuthProvider from './auth/AuthProvider'
+import RequireAuth from './components/RequireAuth'
 import Home from './pages/Home'
+import Login from './pages/Login'
 import NotFound from './pages/NotFound'
 
+/**
+ * Routes of the portal with the authentication provider around them.
+ *
+ * @returns The application router.
+ */
 export default function App() {
   return (
     <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="*" element={<NotFound />} />
-      </Routes>
+      <AuthProvider>
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route element={<RequireAuth />}>
+            <Route path="/" element={<Home />} />
+          </Route>
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </AuthProvider>
     </BrowserRouter>
   )
 }
