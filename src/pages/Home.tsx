@@ -2,6 +2,7 @@
  * Home page of the customer portal.
  */
 
+import { Link } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
 
 /**
@@ -21,6 +22,9 @@ export default function Home() {
         </button>
       </header>
       <p>Tu contrato, tu red y tu consumo de energía.</p>
+      <p>
+        <Link to="/consumo">Mi consumo</Link>
+      </p>
     </main>
   )
 }
