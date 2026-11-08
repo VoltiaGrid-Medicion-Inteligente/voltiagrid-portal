@@ -77,3 +77,18 @@ export interface EventsResponse {
   events: EventParticipation[]
   incentives_total: string
 }
+
+/** One half hour of a customer's day: energy in kWh and whether the reading was estimated. */
+export interface IntervalConsumption {
+  start: string
+  band_name: TariffBand
+  energy_kwh: string
+  estimated: boolean
+}
+
+/** Response of `GET /me/consumption/intervals` for one day: 48 half hours. */
+export interface IntervalsResponse {
+  customer_code: string
+  date: string
+  intervals: IntervalConsumption[]
+}

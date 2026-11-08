@@ -14,6 +14,7 @@ import type {
   ErrorResponse,
   EventsResponse,
   FieldError,
+  IntervalsResponse,
   TokenRequest,
   TokenResponse,
 } from './types'
@@ -166,4 +167,15 @@ export async function getMyDailyConsumption(month: string): Promise<DailyConsump
  */
 export async function getMyEvents(month: string): Promise<EventsResponse> {
   return request<EventsResponse>(`/me/events?month=${encodeURIComponent(month)}`)
+}
+
+/**
+ * Reads `GET /me/consumption/intervals` for one day.
+ *
+ * @param date Day as `YYYY-MM-DD`.
+ * @returns The 48 half hours of the day for the authenticated customer.
+ * @throws {ApiError} When the API rejects the request.
+ */
+export async function getMyIntervals(date: string): Promise<IntervalsResponse> {
+  return request<IntervalsResponse>(`/me/consumption/intervals?date=${encodeURIComponent(date)}`)
 }
