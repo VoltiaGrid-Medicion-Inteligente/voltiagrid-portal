@@ -25,6 +25,12 @@ export default function Home() {
       <p>
         <Link to="/consumo">Mi consumo</Link>
       </p>
+      <p>
+        <Link to="/contrato">Mi contrato</Link>
+      </p>
+      <p>
+        <Link to="/red">Mi red</Link>
+      </p>
     </main>
   )
 }
