@@ -5,7 +5,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { clearAccessToken, getAccessToken, setAccessToken } from '../auth/session'
 import { API_URL } from '../config'
-import { ApiError, getMyDailyConsumption, getMyEvents, login, onUnauthorized } from './client'
+import {
+  ApiError,
+  getMyDailyConsumption,
+  getMyEvents,
+  getMyProfile,
+  login,
+  onUnauthorized,
+} from './client'
 
 /**
  * Builds a minimal response for the fetch mock.
@@ -81,6 +88,35 @@ describe('authenticated requests', () => {
     expect(response.month).toBe('2013-03')
     expect(fetchMock).toHaveBeenCalledWith(
       `${API_URL}/me/consumption/daily?month=2013-03`,
+      expect.objectContaining({
+        headers: expect.objectContaining({ Authorization: 'Bearer token-123' }),
+      }),
+    )
+  })
+
+  it('reads the profile of the customer', async () => {
+    setAccessToken('token-123')
+    fetchMock.mockResolvedValue(
+      jsonResponse({
+        customer_code: 'CU-MAC000002',
+        tariff_type: 'dynamic',
+        socioeconomic_group: 'Comfortable',
+        meters: [
+          {
+            lclid: 'MAC000002',
+            transformer: { code: 'TR-00001', capacity_kva: '100.00' },
+            circuit: { code: 'CT-000' },
+          },
+        ],
+      }),
+    )
+
+    const response = await getMyProfile()
+
+    expect(response.customer_code).toBe('CU-MAC000002')
+    expect(response.meters[0]?.transformer.capacity_kva).toBe('100.00')
+    expect(fetchMock).toHaveBeenCalledWith(
+      `${API_URL}/me/profile`,
       expect.objectContaining({
         headers: expect.objectContaining({ Authorization: 'Bearer token-123' }),
       }),
