@@ -11,12 +11,14 @@ import {
   Legend,
   Line,
   LineChart,
+  ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
 } from 'recharts'
 import { ApiError, getMyDailyConsumption, getMyIntervals } from '../api/client'
 import type { DailyBandConsumption, IntervalConsumption, TariffBand } from '../api/types'
+import Icon from '../components/Icon'
 import {
   BANDS,
   monthTotals,
@@ -25,17 +27,20 @@ import {
   variationPct,
   type DayRow,
 } from '../consumption/summary'
-
-const BAND_LABEL: Record<TariffBand, string> = {
-  'off-peak': 'Valle',
-  intermediate: 'Intermedia',
-  peak: 'Pico',
-}
+import { useI18n } from '../i18n/I18nContext'
 
 const BAND_COLOR: Record<TariffBand, string> = {
-  'off-peak': '#0b6e8a',
-  intermediate: '#8ab4c4',
-  peak: '#b8336a',
+  'off-peak': 'var(--chart-off-peak)',
+  intermediate: 'var(--chart-intermediate)',
+  peak: 'var(--chart-peak)',
+}
+
+const TOOLTIP_STYLE = {
+  background: 'var(--surface-strong)',
+  border: '1px solid var(--border)',
+  borderRadius: 12,
+  boxShadow: 'var(--shadow-soft)',
+  color: 'var(--text-strong)',
 }
 
 /**
@@ -72,6 +77,7 @@ async function loadMonths(month: string): Promise<{
  * @returns The line chart of the day with its estimated half hours counted.
  */
 function DayCurve({ intervals }: { intervals: IntervalConsumption[] }) {
+  const { t } = useI18n()
   const data = intervals.map((interval) => ({
     time: interval.start.includes('T') ? interval.start.slice(11, 16) : interval.start,
     kwh: Number(interval.energy_kwh),
@@ -79,18 +85,43 @@ function DayCurve({ intervals }: { intervals: IntervalConsumption[] }) {
   const estimated = intervals.filter((interval) => interval.estimated).length
 
   return (
-    <section aria-label="Curva del día">
-      <p>
-        Media hora a media hora.{' '}
-        {estimated > 0 ? `${estimated} lecturas estimadas.` : 'Sin lecturas estimadas.'}
+    <section aria-label={t('consumption.curveTitle')}>
+      <p className="card-hint">
+        {t('consumption.curveIntro')}{' '}
+        {estimated > 0
+          ? `${estimated} ${t('consumption.estimatedSuffix')}`
+          : t('consumption.noneEstimated')}
       </p>
-      <LineChart width={640} height={240} data={data}>
-        <CartesianGrid strokeDasharray="3 3" />
-        <XAxis dataKey="time" interval={5} />
-        <YAxis unit=" kWh" />
-        <Tooltip />
-        <Line type="monotone" dataKey="kwh" stroke="#0b6e8a" dot={false} />
-      </LineChart>
+      <div className="chart-frame">
+        <ResponsiveContainer width="100%" height={260}>
+          <LineChart data={data}>
+            <CartesianGrid strokeDasharray="4 6" stroke="var(--grid-line)" vertical={false} />
+            <XAxis
+              dataKey="time"
+              interval={5}
+              tick={{ fill: 'var(--text-muted)', fontSize: 12 }}
+              axisLine={{ stroke: 'var(--grid-line)' }}
+              tickLine={false}
+            />
+            <YAxis
+              unit=" kWh"
+              tick={{ fill: 'var(--text-muted)', fontSize: 12 }}
+              axisLine={false}
+              tickLine={false}
+            />
+            <Tooltip contentStyle={TOOLTIP_STYLE} cursor={{ stroke: 'var(--border-strong)' }} />
+            <Line
+              type="monotone"
+              dataKey="kwh"
+              stroke="var(--chart-line)"
+              strokeWidth={2.5}
+              dot={false}
+              activeDot={{ r: 4, fill: 'var(--accent)', stroke: 'var(--surface-strong)' }}
+              isAnimationActive={false}
+            />
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
     </section>
   )
 }
@@ -101,6 +132,7 @@ function DayCurve({ intervals }: { intervals: IntervalConsumption[] }) {
  * @returns The month view with the chart, the totals and the day selector.
  */
 export default function Consumption() {
+  const { t } = useI18n()
   const [month, setMonth] = useState(currentMonth)
   const [rows, setRows] = useState<DayRow[] | null>(null)
   const [totals, setTotals] = useState<{ energy: number; previous: number; cost: number } | null>(
@@ -128,17 +160,13 @@ export default function Consumption() {
       })
       .catch((caught: unknown) => {
         if (!active) return
-        setError(
-          caught instanceof ApiError
-            ? caught.message
-            : 'No pudimos cargar tu consumo. Revisa tu conexión.',
-        )
+        setError(caught instanceof ApiError ? caught.message : t('consumption.error'))
         setRows(null)
       })
     return () => {
       active = false
     }
-  }, [month])
+  }, [month, t])
 
   async function showDay(date: string) {
     setSelectedDay(date)
@@ -147,90 +175,191 @@ export default function Consumption() {
       const response = await getMyIntervals(date)
       setIntervals(response.intervals)
     } catch (caught: unknown) {
-      setError(caught instanceof ApiError ? caught.message : 'No pudimos cargar la curva del día.')
+      setError(caught instanceof ApiError ? caught.message : t('consumption.curveError'))
     }
   }
 
   const change = totals ? variationPct(totals.energy, totals.previous) : null
 
   return (
-    <main>
-      <header className="app-header">
-        <h1>Mi consumo</h1>
-        <label>
-          Mes{' '}
+    <main className="page">
+      <header className="page-header">
+        <div>
+          <p className="eyebrow">{t('consumption.eyebrow')}</p>
+          <h1>{t('consumption.title')}</h1>
+          <p className="page-subtitle">{t('consumption.subtitle')}</p>
+        </div>
+        <label className="month-field">
+          <span>{t('consumption.month')}</span>
           <input type="month" value={month} onChange={(event) => setMonth(event.target.value)} />
         </label>
       </header>
 
-      {error !== null && <p role="alert">{error}</p>}
+      {error !== null && (
+        <p className="alert" role="alert">
+          {error}
+        </p>
+      )}
 
       {totals !== null && (
-        <section aria-label="Totales del mes">
-          <p>
-            Total del mes: <strong>{totals.energy.toFixed(1)} kWh</strong> · Costo:{' '}
-            <strong>{totals.cost.toFixed(0)}</strong>
-          </p>
-          <p>
-            {change === null
-              ? 'Sin consumo en el mes anterior para comparar.'
-              : `${change >= 0 ? 'Subió' : 'Bajó'} ${Math.abs(change).toFixed(1)}% frente al mes anterior.`}
-          </p>
+        <section className="stat-grid" aria-label={t('consumption.total')}>
+          <article className="stat-card is-highlight">
+            <span className="stat-icon">
+              <Icon name="bolt" size={20} />
+            </span>
+            <p className="stat-label">{t('consumption.total')}</p>
+            <p className="stat-value">
+              {totals.energy.toFixed(1)} <span className="stat-unit">kWh</span>
+            </p>
+            {change !== null && (
+              <p className={change >= 0 ? 'trend is-up' : 'trend is-down'}>
+                {change >= 0 ? t('consumption.up') : t('consumption.down')}{' '}
+                {Math.abs(change).toFixed(1)}%
+              </p>
+            )}
+          </article>
+
+          <article className="stat-card">
+            <span className="stat-icon">
+              <Icon name="contract" size={20} />
+            </span>
+            <p className="stat-label">{t('consumption.cost')}</p>
+            <p className="stat-value">{totals.cost.toFixed(0)}</p>
+            <p className="stat-caption">{month}</p>
+          </article>
+
+          <article className="stat-card">
+            <span className="stat-icon">
+              <Icon name="gauge" size={20} />
+            </span>
+            <p className="stat-label">{t('consumption.comparison')}</p>
+            <p className="stat-text">
+              {change === null
+                ? t('consumption.noPrevious')
+                : `${Math.abs(change).toFixed(1)}% ${t('consumption.changeSuffix')}`}
+            </p>
+          </article>
         </section>
       )}
 
       {rows !== null && rows.length > 0 && (
-        <BarChart width={640} height={300} data={rows}>
-          <CartesianGrid strokeDasharray="3 3" />
-          <XAxis dataKey="date" />
-          <YAxis unit=" kWh" />
-          <Tooltip />
-          <Legend />
-          {BANDS.map((band) => (
-            <Bar
-              key={band}
-              dataKey={band}
-              name={BAND_LABEL[band]}
-              stackId="energy"
-              fill={BAND_COLOR[band]}
-            />
-          ))}
-        </BarChart>
+        <section className="card chart-card">
+          <div className="card-heading">
+            <div>
+              <h2>{t('consumption.chartTitle')}</h2>
+              <p className="card-hint">{t('consumption.chartHint')}</p>
+            </div>
+            <span className="badge">{month}</span>
+          </div>
+          <div className="chart-frame">
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={rows} barCategoryGap="24%">
+                <CartesianGrid strokeDasharray="4 6" stroke="var(--grid-line)" vertical={false} />
+                <XAxis
+                  dataKey="date"
+                  tick={{ fill: 'var(--text-muted)', fontSize: 12 }}
+                  axisLine={{ stroke: 'var(--grid-line)' }}
+                  tickLine={false}
+                  tickFormatter={(value: string) => value.slice(8)}
+                />
+                <YAxis
+                  unit=" kWh"
+                  tick={{ fill: 'var(--text-muted)', fontSize: 12 }}
+                  axisLine={false}
+                  tickLine={false}
+                />
+                <Tooltip
+                  contentStyle={TOOLTIP_STYLE}
+                  cursor={{ fill: 'var(--primary-soft)' }}
+                  labelFormatter={(value) => value}
+                />
+                <Legend
+                  iconType="circle"
+                  itemSorter={null}
+                  wrapperStyle={{ color: 'var(--text-muted)', fontSize: 13, paddingTop: 12 }}
+                />
+                {BANDS.map((band) => (
+                  <Bar
+                    key={band}
+                    dataKey={band}
+                    name={t(`band.${band}`)}
+                    stackId="energy"
+                    fill={BAND_COLOR[band]}
+                    radius={[band === 'peak' ? 6 : 0, band === 'peak' ? 6 : 0, 0, 0]}
+                    isAnimationActive={false}
+                  />
+                ))}
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </section>
       )}
 
-      {rows !== null && rows.length === 0 && <p>No hay lecturas para este mes.</p>}
+      {rows !== null && rows.length === 0 && (
+        <div className="card empty-state">
+          <Icon name="consumption" size={28} />
+          <p>{t('consumption.noReadings')}</p>
+        </div>
+      )}
 
       {rows !== null && rows.length > 0 && (
-        <table>
-          <thead>
-            <tr>
-              <th scope="col">Día</th>
-              <th scope="col">kWh</th>
-              <th scope="col">Lecturas estimadas</th>
-              <th scope="col">Curva</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((row) => (
-              <tr key={row.date}>
-                <td>{row.date}</td>
-                <td>{row.total.toFixed(1)}</td>
-                <td>{row.estimatedReadings > 0 ? `Sí (${row.estimatedReadings})` : 'No'}</td>
-                <td>
-                  <button type="button" onClick={() => void showDay(row.date)}>
-                    Ver curva
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <section className="card table-card">
+          <div className="table-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th scope="col">{t('consumption.tableDay')}</th>
+                  <th scope="col">{t('consumption.tableKwh')}</th>
+                  <th scope="col">{t('consumption.tableEstimated')}</th>
+                  <th scope="col">{t('consumption.tableCurve')}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((row) => (
+                  <tr key={row.date}>
+                    <td>{row.date}</td>
+                    <td className="cell-number">{row.total.toFixed(1)}</td>
+                    <td>
+                      {row.estimatedReadings > 0
+                        ? `${t('consumption.yes')} (${row.estimatedReadings})`
+                        : t('consumption.no')}
+                    </td>
+                    <td>
+                      <button
+                        type="button"
+                        className="button button-ghost button-small"
+                        onClick={() => void showDay(row.date)}
+                      >
+                        {t('consumption.viewCurve')}
+                        <Icon name="arrowRight" size={15} />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
       )}
 
       {selectedDay !== null && (
-        <section aria-label={`Curva del ${selectedDay}`}>
-          <h2>Curva del {selectedDay}</h2>
-          {intervals === null ? <p>Cargando curva…</p> : <DayCurve intervals={intervals} />}
+        <section
+          className="card chart-card"
+          aria-label={`${t('consumption.curveTitle')} ${selectedDay}`}
+        >
+          <div className="card-heading">
+            <div>
+              <h2>
+                {t('consumption.curveTitle')} {selectedDay}
+              </h2>
+            </div>
+            <span className="badge">{selectedDay}</span>
+          </div>
+          {intervals === null ? (
+            <p className="card-hint">{t('consumption.curveLoading')}</p>
+          ) : (
+            <DayCurve intervals={intervals} />
+          )}
         </section>
       )}
     </main>
